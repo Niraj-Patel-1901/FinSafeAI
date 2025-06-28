@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FinSafeAI - Risk & Coaching Assistant</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <style>
+  body {
+    background-color: #f8f9fa;
+  }
+
+  .card {
+    border-radius: 12px;
+  }
+
+  #chat-box {
+    height: 300px;
+    overflow-y: auto;
+    background-color: #fff;
+  }
+
+  .btn-success:hover {
+    background-color: #218838 !important;
+    border-color: #1e7e34 !important;
+  }
+
+  .btn-outline-secondary:hover {
+    background-color: #dee2e6 !important;
+    border-color: #ced4da !important;
+  }
+
+  .btn-danger:hover {
+    background-color: #c82333 !important;
+    border-color: #bd2130 !important;
+  }
+</style>
+</head>
+<body class="bg-light py-4">
+  <div class="container">
+    <div class="card shadow p-4 mb-4">
+      <h2 class="text-center mb-4 text-success">
+        💸 <strong>FinSafeAI</strong> - Risk & Coaching Assistant
+      </h2>
+
+      <!-- Risk Prediction Form -->
+      <form method="POST" action="/predict">
+        <div class="row mb-3">
+          <h5 class="text-primary">📋 Personal & Credit Info</h5>
+          {% for field in ['LIMIT_BAL','SEX','EDUCATION','MARRIAGE','AGE'] %}
+          <div class="col-md-4">
+            <label class="form-label mt-2">{{ field.replace("_", " ") }}</label>
+            <div class="input-group">
+              <input type="number" step="any" class="form-control" name="{{ field }}" id="{{ field }}" required>
+              <button type="button" class="btn btn-outline-secondary" onclick="startDictation('{{ field }}')">🎤</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="row mb-3">
+          <h5 class="text-primary">📊 Payment History</h5>
+          {% for field in ['PAY_0','PAY_2','PAY_3','PAY_4','PAY_5','PAY_6'] %}
+          <div class="col-md-2">
+            <label class="form-label mt-2">{{ field }}</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="{{ field }}" id="{{ field }}" required>
+              <button type="button" class="btn btn-outline-secondary" onclick="startDictation('{{ field }}')">🎤</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="row mb-3">
+          <h5 class="text-primary">💳 Bill Amounts (Last 6 Months)</h5>
+          {% for field in ['BILL_AMT1','BILL_AMT2','BILL_AMT3','BILL_AMT4','BILL_AMT5','BILL_AMT6'] %}
+          <div class="col-md-2">
+            <label class="form-label mt-2">{{ field }}</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="{{ field }}" id="{{ field }}" required>
+              <button type="button" class="btn btn-outline-secondary" onclick="startDictation('{{ field }}')">🎤</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="row mb-3">
+          <h5 class="text-primary">💰 Payments Made</h5>
+          {% for field in ['PAY_AMT1','PAY_AMT2','PAY_AMT3','PAY_AMT4','PAY_AMT5','PAY_AMT6'] %}
+          <div class="col-md-2">
+            <label class="form-label mt-2">{{ field }}</label>
+            <div class="input-group">
+              <input type="number" class="form-control" name="{{ field }}" id="{{ field }}" required>
+              <button type="button" class="btn btn-outline-secondary" onclick="startDictation('{{ field }}')">🎤</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="text-center mt-4">
+          <button type="submit" class="btn btn-lg btn-success px-5">📈 Predict Risk</button>
+        </div>
+      </form>
+
+      <!-- CSV Upload Form -->
+      <hr>
+      <h5 class="text-primary mt-4">📂 Upload CSV for Bulk Prediction</h5>
+      <form method="POST" action="/upload_csv" enctype="multipart/form-data" class="mt-2">
+        <div class="row">
+          <div class="col-md-6">
+            <input type="file" name="csvfile" accept=".csv" class="form-control" required>
+          </div>
+          <div class="col-md-6 text-center">
+            <button type="submit" class="btn btn-lg btn-success px-5">📥 Upload & Predict</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    {% if result %}
+    <div class="card shadow p-4 mb-4">
+      <h4 class="text-primary">📊 Prediction Result</h4>
+      {% if result.error %}
+        <div class="alert alert-danger">{{ result.error }}</div>
+      {% else %}
+        <p><strong>Risk Score:</strong> {{ result["Risk Score"] }}</p>
+        <p><strong>Prediction:</strong> {{ result["Prediction"] }}</p>
+
+        <h5 class="text-success">💬 GenAI Financial Coach</h5>
+        <p>{{ advice }}</p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if csv_results %}
+    <div class="card shadow p-4 mb-4">
+      <h4 class="text-primary">📄 CSV Prediction Results</h4>
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>LIMIT_BAL</th>
+              <th>AGE</th>
+              <th>Risk Score</th>
+              <th>Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in csv_results %}
+            <tr>
+              <td>{{ row['LIMIT_BAL'] }}</td>
+              <td>{{ row['AGE'] }}</td>
+              <td>{{ row['Risk Score'] }}</td>
+              <td>{{ row['Prediction'] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if prediction_history %}
+    <div class="card shadow p-4 mb-4">
+      <h4 class="text-primary">🕘 Past Prediction History</h4>
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>LIMIT_BAL</th>
+              <th>AGE</th>
+              <th>Risk Score</th>
+              <th>Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in prediction_history %}
+            <tr>
+              <td>{{ row['LIMIT_BAL'] }}</td>
+              <td>{{ row['AGE'] }}</td>
+              <td>{{ row['Risk Score'] }}</td>
+              <td>{{ row['Prediction'] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <form method="POST" action="/clear_history">
+          <button type="submit" class="btn btn-sm btn-danger mt-2">🗑 Clear History</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Chatbot Toggle -->
+    <div class="text-center mb-3">
+      <button class="btn btn-success btn-lg" type="button" onclick="toggleChat()">💬 Chat with AI</button>
+    </div>
+
+    <!-- Chatbot Section (Initially Hidden) -->
+    <div id="chat-section" class="card shadow p-4 mb-4" style="display: none;">
+      <h4 class="text-primary">💬 Chat with FinSafeAI</h4>
+      <div id="chat-box" class="border rounded p-3 mb-3">
+        {% for chat in chat_history %}
+          <p><strong>👤 You:</strong> {{ chat.user }}</p>
+          <p><strong>🤖 GenAI Coach:</strong> {{ chat.bot }}</p>
+          <hr>
+        {% endfor %}
+      </div>
+
+      <div class="input-group mb-3">
+        <input type="text" id="chat-input" class="form-control" placeholder="Type your question...">
+        <button class="btn btn-success" onclick="sendMessage()">Send</button>
+      </div>
+
+      <form method="POST" action="/clear_chat">
+        <button type="submit" class="btn btn-danger btn-sm">🗑 Clear Chat</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/words-to-numbers@1.6.0/dist/words-to-numbers.umd.min.js"></script>
+  <script>
+    function toggleChat() {
+      const chatSection = document.getElementById("chat-section");
+      chatSection.style.display = chatSection.style.display === "none" ? "block" : "none";
+      document.getElementById("chat-box").scrollTop = document.getElementById("chat-box").scrollHeight;
+    }
+
+    function sendMessage() {
+      const userInput = document.getElementById("chat-input");
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      const chatBox = document.getElementById("chat-box");
+      chatBox.innerHTML += `<p><strong>👤 You:</strong> ${message}</p>`;
+
+      fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message })
+      })
+      .then(res => res.json())
+      .then(data => {
+        chatBox.innerHTML += `<p><strong>🤖 GenAI Coach:</strong> ${data.response}</p><hr>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
+      userInput.value = "";
+    }
+
+    function startDictation(fieldId) {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition is not supported in this browser.");
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = function(event) {
+        const speechText = event.results[0][0].transcript.toLowerCase();
+        console.log("🎙 Heard:", speechText);
+
+        const parsedNumber = window.wordsToNumbers(speechText, { fuzzy: true });
+        console.log("🔢 Converted:", parsedNumber);
+
+        if (!isNaN(parsedNumber)) {
+          document.getElementById(fieldId).value = parsedNumber;
+        } else {
+          alert("Couldn't recognize a valid number from: " + speechText);
+        }
+      };
+
+      recognition.onerror = function(event) {
+        console.error("Speech Recognition Error:", event.error);
+        alert("Error using speech recognition: " + event.error);
+      };
+
+      recognition.start();
+    }
+  </script>
+</body>
+</html>
