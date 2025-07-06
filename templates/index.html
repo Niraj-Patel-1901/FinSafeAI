@@ -218,7 +218,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/words-to-numbers@1.6.0/dist/words-to-numbers.umd.min.js"></script>
+  
+
   <script>
     function toggleChat() {
       const chatSection = document.getElementById("chat-section");
@@ -247,39 +248,90 @@
 
       userInput.value = "";
     }
+     
+   function nlpParseNumber(text) {
+  const SMALL = {
+    "zero": 0, "one": 1, "two": 2, "three": 3, "four": 4,
+    "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+    "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13,
+    "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+    "eighteen": 18, "nineteen": 19
+  };
 
-    function startDictation(fieldId) {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition is not supported in this browser.");
-        return;
-      }
+  const TENS = {
+    "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50,
+    "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90
+  };
 
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = "en-IN";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
+  const MULTIPLIERS = {
+    "hundred": 100,
+    "thousand": 1000,
+    "lakh": 100000,
+    "million": 1000000
+  };
 
-      recognition.onresult = function(event) {
-        const speechText = event.results[0][0].transcript.toLowerCase();
-        console.log("🎙 Heard:", speechText);
+  const tokens = text.toLowerCase().replace(/ and /g, ' ').split(/\s+/);
 
-        const parsedNumber = window.wordsToNumbers(speechText, { fuzzy: true });
-        console.log("🔢 Converted:", parsedNumber);
+  let total = 0;
+  let current = 0;
+  let negative = false;
 
-        if (!isNaN(parsedNumber)) {
-          document.getElementById(fieldId).value = parsedNumber;
-        } else {
-          alert("Couldn't recognize a valid number from: " + speechText);
-        }
-      };
-
-      recognition.onerror = function(event) {
-        console.error("Speech Recognition Error:", event.error);
-        alert("Error using speech recognition: " + event.error);
-      };
-
-      recognition.start();
+  for (let word of tokens) {
+    if (word === "minus" || word === "negative") {
+      negative = true;
+    } else if (SMALL[word] !== undefined) {
+      current += SMALL[word];
+    } else if (TENS[word] !== undefined) {
+      current += TENS[word];
+    } else if (MULTIPLIERS[word] !== undefined) {
+      if (current === 0) current = 1;
+      current *= MULTIPLIERS[word];
+      total += current;
+      current = 0;
+    } else if (!isNaN(parseInt(word))) {
+      current += parseInt(word);
     }
+  }
+
+  total += current;  // ✅ Fix: Add remaining digits
+
+  const finalNumber = negative ? -total : total;
+  return finalNumber;
+}
+
+   function startDictation(fieldId) {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert("Speech recognition is not supported in this browser.");
+    return;
+  }
+
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = function(event) {
+    const speechText = event.results[0][0].transcript.toLowerCase();
+    console.log("🎙 Heard:", speechText);
+
+    const parsedNumber = nlpParseNumber(speechText);
+    console.log("🔢 NLP Parsed:", parsedNumber);
+
+    if (!isNaN(parsedNumber)) {
+      document.getElementById(fieldId).value = parsedNumber;
+    } else {
+      alert("Couldn't recognize a valid number from: " + speechText);
+    }
+  };
+
+  recognition.onerror = function(event) {
+    console.error("Speech Recognition Error:", event.error);
+    alert("Error using speech recognition: " + event.error);
+  };
+
+  recognition.start();
+}
+
   </script>
 </body>
 </html>
